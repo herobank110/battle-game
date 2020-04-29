@@ -30,6 +30,15 @@ public:
 	float BaseLookUpRate;
 
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="BattleGame|Stats", BlueprintGetter)
+	/** Health of player at start of game. */
+	float MaxHealth;
+
+	UPROPERTY(BlueprintReadOnly, Category="BattleGame|Stats", BlueprintGetter)
+	/** Current health of player during game. */
+	float Health;
+
+protected:
 
 	/** Resets HMD orientation in VR. */
 	void OnResetVR();
