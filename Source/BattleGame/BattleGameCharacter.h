@@ -76,7 +76,14 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+	// AActor interface
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
+
+	// Cannot override ReceiveAnyDamage as it wasn't overrided in APawn or ACharacter.
+	//void ReceiveAnyDamage(float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
+
+	float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser);
+	// End of AActor interface
 
 public:
 	/** Returns CameraBoom subobject **/

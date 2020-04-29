@@ -92,6 +92,15 @@ void ABattleGameCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(ABattleGameCharacter, Health);
 }
 
+float ABattleGameCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	// Get damage amount from parent (usually returns the same value as DamageAmount)
+	const float DamageToApply = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	Health -= DamageToApply;
+	GEngine->AddOnScreenDebugMessage(48273, 2.f, FColor::Yellow, FString::Printf(TEXT("Player health now %.1f"), Health));
+	return DamageToApply;
+}
+
 
 void ABattleGameCharacter::OnResetVR()
 {
