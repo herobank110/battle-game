@@ -30,11 +30,11 @@ public:
 	float BaseLookUpRate;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="BattleGame|Stats", BlueprintGetter)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="BattleGame|Stats")
 	/** Health of player at start of game. */
 	float MaxHealth;
 
-	UPROPERTY(BlueprintReadOnly, Category="BattleGame|Stats", BlueprintGetter)
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="BattleGame|Stats")
 	/** Current health of player during game. */
 	float Health;
 
@@ -71,6 +71,9 @@ protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
+
+public:
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
 
 public:
 	/** Returns CameraBoom subobject **/
