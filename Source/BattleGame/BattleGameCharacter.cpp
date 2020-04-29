@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Net/UnrealNetwork.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ABattleGameCharacter
@@ -74,6 +75,21 @@ void ABattleGameCharacter::SetupPlayerInputComponent(class UInputComponent* Play
 
 	// VR headset functionality
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &ABattleGameCharacter::OnResetVR);
+}
+
+void ABattleGameCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Doesn't need to replicate since maxhealth is known at build time and is guaranteed to be the same.
+	Health = MaxHealth;
+}
+
+void ABattleGameCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ABattleGameCharacter, Health);
 }
 
 

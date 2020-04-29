@@ -30,6 +30,15 @@ public:
 	float BaseLookUpRate;
 
 protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="BattleGame|Stats")
+	/** Health of player at start of game. */
+	float MaxHealth;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category="BattleGame|Stats")
+	/** Current health of player during game. */
+	float Health;
+
+protected:
 
 	/** Resets HMD orientation in VR. */
 	void OnResetVR();
@@ -62,6 +71,12 @@ protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface
+
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
+public:
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
 
 public:
 	/** Returns CameraBoom subobject **/
