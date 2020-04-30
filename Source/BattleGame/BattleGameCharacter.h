@@ -48,12 +48,22 @@ protected:
 	float AttackCooldownDuration;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BattleGame|Attack")
+	/** Time delay between starting an attack attempt and damage being applied, in seconds.
+	 * This will be the cue at some point in the attack animation for the damage to actually apply.
+	 * Zero or negative values will apply damage immediately.
+	 * If greater than the Attack Cool Down, damage will be clamped to the cool down end duration.
+	 */
+	float ApplyAttackDamageDelay;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BattleGame|Attack")
 	/** Type of damage to use to other player when attacking them. */
 	TSubclassOf<UDamageType> AttackDamageClass;
 
 private:
 	/** [server] Timer between attacks to keep a cool-down between attacks. */
 	FTimerHandle AttackTimer;
+	/** [server] Timer between attacks to keep a cool-down between attacks. */
+	FTimerHandle ApplyAttackDamageTimer;
 
 protected:
 

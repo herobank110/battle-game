@@ -174,11 +174,21 @@ void ABattleGameCharacter::Server_Attack_Implementation()
 		// Don't start an attack while another one is still valid.
 		return;
 
+	auto &TimerManager = GetWorld()->GetTimerManager();
 	// Set a self-invalidating timer so we can't attack again during the attack phase.
-	GetWorld()->GetTimerManager().SetTimer(AttackTimer, [this]() {AttackTimer.Invalidate(); }, AttackCooldownDuration, /*inBLoop=*/false);
+	TimerManager.SetTimer(AttackTimer, [this]() {AttackTimer.Invalidate(); }, AttackCooldownDuration, /*inBLoop=*/false);
 
-	// Apply the damage, immediately. TODO: add on a delay timer for animation.
-	SeekAndApplyDamage();
+	if (ApplyAttackDamageDelay > 0.0)
+	{
+		// Apply the damage after a short delay to be in time with the animation.
+		const float AttackDelay = ApplyAttackDamageDelay < AttackCooldownDuration ? ApplyAttackDamageDelay : AttackCooldownDuration;
+		TimerManager.SetTimer(ApplyAttackDamageTimer, [this]() {SeekAndApplyDamage(); }, AttackDelay, false);
+	}
+	else
+	{
+		// The attack delay was zero or less so apply damage right away. Setting a timer with zero or less delay would never be called!
+		SeekAndApplyDamage();
+	}
 
 	// Trigger the relevant multicast events for blueprints to react.
 	Multicast_OnAttackAttempted();
