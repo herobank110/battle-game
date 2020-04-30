@@ -124,9 +124,7 @@ void ABattleGameCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector L
 
 void ABattleGameCharacter::Local_Attack()
 {
-	// Call the attack on the server.
-	// There could be additional checks client side to see if there is anyone available to attack, but for now
-	// it will just tell the server to do the checks.
+	// Always send attack requests to server so attack animation is visible via all clients.
 	Server_Attack();
 }
 
@@ -171,8 +169,10 @@ void ABattleGameCharacter::SeekAndApplyDamage()
 void ABattleGameCharacter::Server_Attack_Implementation()
 {
 	if (AttackTimer.IsValid())
+	{
 		// Don't start an attack while another one is still valid.
 		return;
+	}
 
 	auto &TimerManager = GetWorld()->GetTimerManager();
 	// Set a self-invalidating timer so we can't attack again during the attack phase.
