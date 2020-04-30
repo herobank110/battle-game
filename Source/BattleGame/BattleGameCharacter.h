@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "BattleGameCharacter.generated.h"
 
+
 UCLASS(config=Game)
 class ABattleGameCharacter : public ACharacter
 {
@@ -89,6 +90,22 @@ protected:
 	UFUNCTION(Server, Reliable)
 	/** Called on server to actually input and process an attack. */
 	void Server_Attack();
+
+	UFUNCTION(NetMulticast, Unreliable)
+	/** [multicast] Called when an attack was successfully issued. */
+	void Multicast_OnAttackAttempted();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "BattleGame")
+	/** [blueprint] Called when an attack was successfully issued. */
+	void OnAttackAttempted();
+
+	UFUNCTION(NetMulticast, Unreliable)
+	/** [multicast] Called when an attack hit another player. */
+	void Multicast_OnAttackSuccessful(const FHitResult& Hit);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "BattleGame")
+	/** [blueprint] Called when an attack hit another player. */
+	void OnAttackSuccessful(const FHitResult& Hit);
 
 protected:
 	// APawn interface

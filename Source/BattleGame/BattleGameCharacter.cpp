@@ -130,6 +130,16 @@ void ABattleGameCharacter::Local_Attack()
 	Server_Attack();
 }
 
+void ABattleGameCharacter::Multicast_OnAttackAttempted_Implementation()
+{
+	OnAttackAttempted();
+}
+
+void ABattleGameCharacter::Multicast_OnAttackSuccessful_Implementation(const FHitResult& Hit)
+{
+	OnAttackSuccessful(Hit);
+}
+
 void ABattleGameCharacter::Server_Attack_Implementation()
 {
 	if (AttackTimer.IsValid())
@@ -148,22 +158,26 @@ void ABattleGameCharacter::Server_Attack_Implementation()
 	// Only trace for other pawns (players.)
 	const FCollisionObjectQueryParams ObjectsQueryParams{ ECC_Pawn };
 	const FCollisionQueryParams TraceParams{ /*InTraceTag=*/NAME_None, /*bInTraceComplex=*/false, /*InIgnoreActor=*/this };
+	bool bWasHitSuccessful = false;
 	if (GetWorld()->LineTraceSingleByObjectType(Hit, Start, End, ObjectsQueryParams, TraceParams))
 	{
 		const auto OtherPlayer = Cast<ABattleGameCharacter>(Hit.Actor);
 		if (OtherPlayer)
 		{
 			// Successfully hit a player character. Apply damage.
-			// Damage will come from this character
 			// TODO: damage from the weapon that hit them.
 			OtherPlayer->TakeDamage(AttackAmount, FDamageEvent(AttackDamageClass), GetController(), this);
 			// Set a self-invalidating timer so we can't attack again during the attack animation.
 			GetWorld()->GetTimerManager().SetTimer(AttackTimer, [this]() {AttackTimer.Invalidate(); }, AttackCooldownDuration, /*inBLoop=*/false);
+			// Mark it as a successful hit.
+			bWasHitSuccessful = true;
 		}
-
-		//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Blue, TEXT("Hit another player!"));
-		// TODO: ApplyDamage to the other actor.
 	}
+
+	// Trigger the relevant multicast events for blueprints to react.
+	Multicast_OnAttackAttempted();
+	if (bWasHitSuccessful)
+		Multicast_OnAttackSuccessful(Hit);
 }
 
 void ABattleGameCharacter::TurnAtRate(float Rate)
