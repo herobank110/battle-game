@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "BattleGameCharacter.generated.h"
 
+
 UCLASS(config=Game)
 class ABattleGameCharacter : public ACharacter
 {
@@ -38,6 +39,32 @@ protected:
 	/** Current health of player during game. */
 	float Health;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BattleGame|Attack")
+	/** Amount of damage to apply when attacking another player. */
+	float AttackAmount;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BattleGame|Attack", meta=(DisplayName="Attack Cool Down"))
+	/** Minimum time delay between attack attempts, in seconds. */
+	float AttackCooldownDuration;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BattleGame|Attack")
+	/** Time delay between starting an attack attempt and damage being applied, in seconds.
+	 * This will be the cue at some point in the attack animation for the damage to actually apply.
+	 * Zero or negative values will apply damage immediately.
+	 * If greater than the Attack Cool Down, damage will be clamped to the cool down end duration.
+	 */
+	float ApplyAttackDamageDelay;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BattleGame|Attack")
+	/** Type of damage to use to other player when attacking them. */
+	TSubclassOf<UDamageType> AttackDamageClass;
+
+private:
+	/** [server] Timer between attacks to keep a cool-down between attacks. */
+	FTimerHandle AttackTimer;
+	/** [server] Timer between attacks to keep a cool-down between attacks. */
+	FTimerHandle ApplyAttackDamageTimer;
+
 protected:
 
 	/** Resets HMD orientation in VR. */
@@ -67,6 +94,40 @@ protected:
 	/** Handler for when a touch input stops. */
 	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
 
+	/** Called when attack button pressed locally. */
+	void Local_Attack();
+
+	UFUNCTION(Server, Reliable)
+	/** Called on server to actually input and process an attack. */
+	void Server_Attack();
+
+	/**
+	 * Test for another player directly in front of this player.
+	 *
+	 * @param HitResult Data about the hit, if is was successful.
+	 * @returns Whether player was found.
+	 */
+	bool TraceForOpponent(FHitResult& HitResult);
+
+	/** [server] Test for another player directly in front of this player and hurt them if found. */
+	void SeekAndApplyDamage();
+
+	UFUNCTION(NetMulticast, Unreliable)
+	/** [multicast] Called when an attack was successfully issued. */
+	void Multicast_OnAttackAttempted();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "BattleGame")
+	/** [blueprint] Called when an attack was successfully issued. */
+	void OnAttackAttempted();
+
+	UFUNCTION(NetMulticast, Unreliable)
+	/** [multicast] Called when an attack hit another player. */
+	void Multicast_OnAttackSuccessful(const FHitResult& Hit);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "BattleGame")
+	/** [blueprint] Called when an attack hit another player. */
+	void OnAttackSuccessful(const FHitResult& Hit);
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -76,7 +137,14 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+	// AActor interface
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
+
+	// Cannot override ReceiveAnyDamage as it wasn't overrided in APawn or ACharacter.
+	//void ReceiveAnyDamage(float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
+
+	float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser);
+	// End of AActor interface
 
 public:
 	/** Returns CameraBoom subobject **/

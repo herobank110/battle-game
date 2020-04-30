@@ -9,6 +9,8 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ABattleGameCharacter
@@ -53,6 +55,7 @@ ABattleGameCharacter::ABattleGameCharacter()
 
 void ABattleGameCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	// Set up gameplay key bindings
 	check(PlayerInputComponent);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
@@ -75,6 +78,9 @@ void ABattleGameCharacter::SetupPlayerInputComponent(class UInputComponent* Play
 
 	// VR headset functionality
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &ABattleGameCharacter::OnResetVR);
+
+	// Bind additional BattleGame input mappings.
+	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &ABattleGameCharacter::Local_Attack);
 }
 
 void ABattleGameCharacter::BeginPlay()
@@ -92,6 +98,14 @@ void ABattleGameCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(ABattleGameCharacter, Health);
 }
 
+float ABattleGameCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	// Get damage amount from parent (usually returns the same value as DamageAmount)
+	const float DamageToApply = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	Health -= DamageToApply;
+	//GEngine->AddOnScreenDebugMessage(48273, 2.f, FColor::Yellow, FString::Printf(TEXT("Player health now %.1f"), Health));
+	return DamageToApply;
+}
 
 void ABattleGameCharacter::OnResetVR()
 {
@@ -106,6 +120,88 @@ void ABattleGameCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector L
 void ABattleGameCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 {
 		StopJumping();
+}
+
+void ABattleGameCharacter::Local_Attack()
+{
+	// Always send attack requests to server so attack animation is visible via all clients.
+	Server_Attack();
+}
+
+bool ABattleGameCharacter::TraceForOpponent(FHitResult& HitResult)
+{
+	// Return the center of the actor (hips).
+	const auto Start = GetActorLocation();
+	// Line trace forward from the actor's forward vector (not the camera's.)
+	auto ForwardProjection = GetActorForwardVector();
+	ForwardProjection.Z = 0.f;  // Ignore pitch information, trace straight forward.
+	ForwardProjection *= 75.f;  // How far to extend the line trace, in unreal units.
+	const auto End = Start + ForwardProjection;
+
+	// Only trace for other pawns (players.)
+	const FCollisionObjectQueryParams ObjectsQueryParams{ ECC_Pawn };
+	const FCollisionQueryParams TraceParams{ /*InTraceTag=*/NAME_None, /*bInTraceComplex=*/false, /*InIgnoreActor=*/this };
+	return GetWorld()->LineTraceSingleByObjectType(HitResult, Start, End, ObjectsQueryParams, TraceParams);
+}
+
+void ABattleGameCharacter::SeekAndApplyDamage()
+{
+	bool bWasHitSuccessful = false;
+	FHitResult HitResult;
+	if (TraceForOpponent(HitResult))
+	{
+		const auto OtherPlayer = Cast<ABattleGameCharacter>(HitResult.Actor);
+		if (OtherPlayer)
+		{
+			// Successfully hit a player character. Apply damage.
+			// TODO: damage from the weapon that hit them.
+			OtherPlayer->TakeDamage(AttackAmount, FDamageEvent(AttackDamageClass), GetController(), this);
+			// Mark it as a successful hit.
+			bWasHitSuccessful = true;
+		}
+	}
+
+	// Trigger the relevant multicast events for blueprints to react.
+	if (bWasHitSuccessful)
+		Multicast_OnAttackSuccessful(HitResult);
+}
+
+void ABattleGameCharacter::Server_Attack_Implementation()
+{
+	if (AttackTimer.IsValid())
+	{
+		// Don't start an attack while another one is still valid.
+		return;
+	}
+
+	auto &TimerManager = GetWorld()->GetTimerManager();
+	// Set a self-invalidating timer so we can't attack again during the attack phase.
+	TimerManager.SetTimer(AttackTimer, [this]() {AttackTimer.Invalidate(); }, AttackCooldownDuration, /*inBLoop=*/false);
+
+	if (ApplyAttackDamageDelay > 0.0)
+	{
+		// Apply the damage after a short delay to be in time with the animation.
+		const float AttackDelay = ApplyAttackDamageDelay < AttackCooldownDuration ? ApplyAttackDamageDelay : AttackCooldownDuration;
+		TimerManager.SetTimer(ApplyAttackDamageTimer, [this]() {SeekAndApplyDamage(); }, AttackDelay, false);
+	}
+	else
+	{
+		// The attack delay was zero or less so apply damage right away. Setting a timer with zero or less delay would never be called!
+		SeekAndApplyDamage();
+	}
+
+	// Trigger the relevant multicast events for blueprints to react.
+	Multicast_OnAttackAttempted();
+}
+
+void ABattleGameCharacter::Multicast_OnAttackAttempted_Implementation()
+{
+	OnAttackAttempted();
+}
+
+void ABattleGameCharacter::Multicast_OnAttackSuccessful_Implementation(const FHitResult& Hit)
+{
+	OnAttackSuccessful(Hit);
 }
 
 void ABattleGameCharacter::TurnAtRate(float Rate)
