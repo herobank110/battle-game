@@ -91,6 +91,17 @@ protected:
 	/** Called on server to actually input and process an attack. */
 	void Server_Attack();
 
+	/**
+	 * Test for another player directly in front of this player.
+	 *
+	 * @param HitResult Data about the hit, if is was successful.
+	 * @returns Whether player was found.
+	 */
+	bool TraceForOpponent(FHitResult& HitResult);
+
+	/** [server] Test for another player directly in front of this player and hurt them if found. */
+	void SeekAndApplyDamage();
+
 	UFUNCTION(NetMulticast, Unreliable)
 	/** [multicast] Called when an attack was successfully issued. */
 	void Multicast_OnAttackAttempted();

@@ -130,22 +130,8 @@ void ABattleGameCharacter::Local_Attack()
 	Server_Attack();
 }
 
-void ABattleGameCharacter::Multicast_OnAttackAttempted_Implementation()
+bool ABattleGameCharacter::TraceForOpponent(FHitResult& HitResult)
 {
-	OnAttackAttempted();
-}
-
-void ABattleGameCharacter::Multicast_OnAttackSuccessful_Implementation(const FHitResult& Hit)
-{
-	OnAttackSuccessful(Hit);
-}
-
-void ABattleGameCharacter::Server_Attack_Implementation()
-{
-	if (AttackTimer.IsValid())
-		// Don't start an attack while another one is still valid.
-		return;
-
 	// Return the center of the actor (hips).
 	const auto Start = GetActorLocation();
 	// Line trace forward from the actor's forward vector (not the camera's.)
@@ -154,30 +140,58 @@ void ABattleGameCharacter::Server_Attack_Implementation()
 	ForwardProjection *= 75.f;  // How far to extend the line trace, in unreal units.
 	const auto End = Start + ForwardProjection;
 
-	FHitResult Hit;
 	// Only trace for other pawns (players.)
 	const FCollisionObjectQueryParams ObjectsQueryParams{ ECC_Pawn };
 	const FCollisionQueryParams TraceParams{ /*InTraceTag=*/NAME_None, /*bInTraceComplex=*/false, /*InIgnoreActor=*/this };
+	return GetWorld()->LineTraceSingleByObjectType(HitResult, Start, End, ObjectsQueryParams, TraceParams);
+}
+
+void ABattleGameCharacter::SeekAndApplyDamage()
+{
 	bool bWasHitSuccessful = false;
-	if (GetWorld()->LineTraceSingleByObjectType(Hit, Start, End, ObjectsQueryParams, TraceParams))
+	FHitResult HitResult;
+	if (TraceForOpponent(HitResult))
 	{
-		const auto OtherPlayer = Cast<ABattleGameCharacter>(Hit.Actor);
+		const auto OtherPlayer = Cast<ABattleGameCharacter>(HitResult.Actor);
 		if (OtherPlayer)
 		{
 			// Successfully hit a player character. Apply damage.
 			// TODO: damage from the weapon that hit them.
 			OtherPlayer->TakeDamage(AttackAmount, FDamageEvent(AttackDamageClass), GetController(), this);
-			// Set a self-invalidating timer so we can't attack again during the attack animation.
-			GetWorld()->GetTimerManager().SetTimer(AttackTimer, [this]() {AttackTimer.Invalidate(); }, AttackCooldownDuration, /*inBLoop=*/false);
 			// Mark it as a successful hit.
 			bWasHitSuccessful = true;
 		}
 	}
 
 	// Trigger the relevant multicast events for blueprints to react.
-	Multicast_OnAttackAttempted();
 	if (bWasHitSuccessful)
-		Multicast_OnAttackSuccessful(Hit);
+		Multicast_OnAttackSuccessful(HitResult);
+}
+
+void ABattleGameCharacter::Server_Attack_Implementation()
+{
+	if (AttackTimer.IsValid())
+		// Don't start an attack while another one is still valid.
+		return;
+
+	// Set a self-invalidating timer so we can't attack again during the attack phase.
+	GetWorld()->GetTimerManager().SetTimer(AttackTimer, [this]() {AttackTimer.Invalidate(); }, AttackCooldownDuration, /*inBLoop=*/false);
+
+	// Apply the damage, immediately. TODO: add on a delay timer for animation.
+	SeekAndApplyDamage();
+
+	// Trigger the relevant multicast events for blueprints to react.
+	Multicast_OnAttackAttempted();
+}
+
+void ABattleGameCharacter::Multicast_OnAttackAttempted_Implementation()
+{
+	OnAttackAttempted();
+}
+
+void ABattleGameCharacter::Multicast_OnAttackSuccessful_Implementation(const FHitResult& Hit)
+{
+	OnAttackSuccessful(Hit);
 }
 
 void ABattleGameCharacter::TurnAtRate(float Rate)
