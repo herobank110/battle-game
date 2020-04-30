@@ -38,6 +38,14 @@ protected:
 	/** Current health of player during game. */
 	float Health;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BattleGame|Attack")
+	/** Amount of damage to apply when attacking another player. */
+	float AttackAmount;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BattleGame|Attack")
+	/** Type of damage to use to other player when attacking them. */
+	TSubclassOf<UDamageType> AttackDamageClass;
+
 protected:
 
 	/** Resets HMD orientation in VR. */

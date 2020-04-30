@@ -151,7 +151,7 @@ void ABattleGameCharacter::Server_Attack_Implementation()
 			// Successfully hit a player character. Apply damage.
 			// Damage will come from this character
 			// TODO: damage from the weapon that hit them.
-			OtherPlayer->TakeDamage(20.f, {}, GetController(), this);
+			OtherPlayer->TakeDamage(AttackAmount, FDamageEvent(AttackDamageClass), GetController(), this);
 		}
 
 		//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Blue, TEXT("Hit another player!"));
