@@ -67,6 +67,13 @@ protected:
 	/** Handler for when a touch input stops. */
 	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
 
+	/** Called when attack button pressed locally. */
+	void Local_Attack();
+
+	UFUNCTION(Server, Reliable)
+	/** Called on server to actually input and process an attack. */
+	void Server_Attack();
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;

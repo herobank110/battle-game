@@ -4,7 +4,7 @@
 #include "BattlePlayerController.h"
 #include "BattleGameCharacter.h"
 
-
+#if 0
 void ABattlePlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
@@ -25,3 +25,4 @@ void ABattlePlayerController::Server_ApplyDamage_Implementation()
 	ABattleGameCharacter* PlayerCharacter = GetPawn<ABattleGameCharacter>();
 	PlayerCharacter->TakeDamage(20.f, FDamageEvent(), nullptr, nullptr);
 }
+#endif

@@ -76,6 +76,9 @@ void ABattleGameCharacter::SetupPlayerInputComponent(class UInputComponent* Play
 
 	// VR headset functionality
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &ABattleGameCharacter::OnResetVR);
+
+	// Bind additional BattleGame input mappings.
+	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &ABattleGameCharacter::Local_Attack);
 }
 
 void ABattleGameCharacter::BeginPlay()
@@ -102,7 +105,6 @@ float ABattleGameCharacter::TakeDamage(float DamageAmount, FDamageEvent const& D
 	return DamageToApply;
 }
 
-
 void ABattleGameCharacter::OnResetVR()
 {
 	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
@@ -116,6 +118,19 @@ void ABattleGameCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector L
 void ABattleGameCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 {
 		StopJumping();
+}
+
+void ABattleGameCharacter::Local_Attack()
+{
+	// Call the attack on the server.
+	// There could be additional checks client side to see if there is anyone available to attack, but for now
+	// it will just tell the server to do the checks.
+	Server_Attack();
+}
+
+void ABattleGameCharacter::Server_Attack_Implementation()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan, TEXT("Hello world"));
 }
 
 void ABattleGameCharacter::TurnAtRate(float Rate)

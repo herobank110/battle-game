@@ -14,6 +14,7 @@ class BATTLEGAME_API ABattlePlayerController : public APlayerController
 {
 	GENERATED_BODY()
 
+#if 0
 protected:
 
 	// Sets up input
@@ -25,4 +26,5 @@ protected:
 	UFUNCTION(Server, Reliable)
 	// Called on server to actually apply damage.
 	void Server_ApplyDamage();
+#endif
 };
