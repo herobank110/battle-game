@@ -10,6 +10,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/World.h"
+#include "TimerManager.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ABattleGameCharacter
@@ -102,7 +103,7 @@ float ABattleGameCharacter::TakeDamage(float DamageAmount, FDamageEvent const& D
 	// Get damage amount from parent (usually returns the same value as DamageAmount)
 	const float DamageToApply = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	Health -= DamageToApply;
-	GEngine->AddOnScreenDebugMessage(48273, 2.f, FColor::Yellow, FString::Printf(TEXT("Player health now %.1f"), Health));
+	//GEngine->AddOnScreenDebugMessage(48273, 2.f, FColor::Yellow, FString::Printf(TEXT("Player health now %.1f"), Health));
 	return DamageToApply;
 }
 
@@ -131,6 +132,10 @@ void ABattleGameCharacter::Local_Attack()
 
 void ABattleGameCharacter::Server_Attack_Implementation()
 {
+	if (AttackTimer.IsValid())
+		// Don't start an attack while another one is still valid.
+		return;
+
 	// Return the center of the actor (hips).
 	const auto Start = GetActorLocation();
 	// Line trace forward from the actor's forward vector (not the camera's.)
@@ -152,6 +157,8 @@ void ABattleGameCharacter::Server_Attack_Implementation()
 			// Damage will come from this character
 			// TODO: damage from the weapon that hit them.
 			OtherPlayer->TakeDamage(AttackAmount, FDamageEvent(AttackDamageClass), GetController(), this);
+			// Set a self-invalidating timer so we can't attack again during the attack animation.
+			GetWorld()->GetTimerManager().SetTimer(AttackTimer, [this]() {AttackTimer.Invalidate(); }, AttackCooldownDuration, /*inBLoop=*/false);
 		}
 
 		//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Blue, TEXT("Hit another player!"));

@@ -42,9 +42,17 @@ protected:
 	/** Amount of damage to apply when attacking another player. */
 	float AttackAmount;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BattleGame|Attack", meta=(DisplayName="Attack Cool Down"))
+	/** Minimum time delay between attack attempts, in seconds. */
+	float AttackCooldownDuration;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "BattleGame|Attack")
 	/** Type of damage to use to other player when attacking them. */
 	TSubclassOf<UDamageType> AttackDamageClass;
+
+private:
+	/** [server] Timer between attacks to keep a cool-down between attacks. */
+	FTimerHandle AttackTimer;
 
 protected:
 
