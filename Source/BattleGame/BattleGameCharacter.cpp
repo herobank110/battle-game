@@ -145,7 +145,16 @@ void ABattleGameCharacter::Server_Attack_Implementation()
 	const FCollisionQueryParams TraceParams{ /*InTraceTag=*/NAME_None, /*bInTraceComplex=*/false, /*InIgnoreActor=*/this };
 	if (GetWorld()->LineTraceSingleByObjectType(Hit, Start, End, ObjectsQueryParams, TraceParams))
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Blue, TEXT("Hit another player!"));
+		const auto OtherPlayer = Cast<ABattleGameCharacter>(Hit.Actor);
+		if (OtherPlayer)
+		{
+			// Successfully hit a player character. Apply damage.
+			// Damage will come from this character
+			// TODO: damage from the weapon that hit them.
+			OtherPlayer->TakeDamage(20.f, {}, GetController(), this);
+		}
+
+		//GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Blue, TEXT("Hit another player!"));
 		// TODO: ApplyDamage to the other actor.
 	}
 }
