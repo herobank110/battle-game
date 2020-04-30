@@ -9,6 +9,7 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Engine/World.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ABattleGameCharacter
@@ -130,7 +131,23 @@ void ABattleGameCharacter::Local_Attack()
 
 void ABattleGameCharacter::Server_Attack_Implementation()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Cyan, TEXT("Hello world"));
+	// Return the center of the actor (hips).
+	const auto Start = GetActorLocation();
+	// Line trace forward from the actor's forward vector (not the camera's.)
+	auto ForwardProjection = GetActorForwardVector();
+	ForwardProjection.Z = 0.f;  // Ignore pitch information, trace straight forward.
+	ForwardProjection *= 75.f;  // How far to extend the line trace, in unreal units.
+	const auto End = Start + ForwardProjection;
+
+	FHitResult Hit;
+	// Only trace for other pawns (players.)
+	const FCollisionObjectQueryParams ObjectsQueryParams{ ECC_Pawn };
+	const FCollisionQueryParams TraceParams{ /*InTraceTag=*/NAME_None, /*bInTraceComplex=*/false, /*InIgnoreActor=*/this };
+	if (GetWorld()->LineTraceSingleByObjectType(Hit, Start, End, ObjectsQueryParams, TraceParams))
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Blue, TEXT("Hit another player!"));
+		// TODO: ApplyDamage to the other actor.
+	}
 }
 
 void ABattleGameCharacter::TurnAtRate(float Rate)
